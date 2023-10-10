@@ -102,22 +102,35 @@ The especially great things about **sf** objects is that we can use **tidyverse*
 
 We can select columns...
 ```{r include=TRUE}
-
+world |> 
+  select(name_long, pop)
 
 ```
 
 Or remove columns...
 ```{r include=TRUE}
+world |> 
+  select(-subregion)
 
+# still 177 features (geometries) but now only 10 columns
 ```
 
 Or select AND rename columns
 ```{r include=TRUE}
 
+world |> 
+  select(name = name_long, population = pop)
+
 ```
 
 Or filter observations based on variables
 ```{r include=TRUE}
+world |> 
+  filter(area_km2 < 10000)
+
+
+world |> 
+  filter(lifeExp >= 80)
 
 ```
 
@@ -127,6 +140,16 @@ Because we can use **dplyr** functions with **sf** objects, we can chain togethe
 Let's try to find the country in Asia with the highest life expectancy
 ```{r include=TRUE}
 
+world |> 
+  filter(continent == "Asia") |> 
+  select(name_long, continent, lifeExp) |> 
+  slice_max(lifeExp) # new function! super cool 
+
+```
+```{r}
+world |> 
+  select(name_long, continent, lifeExp) |> 
+  slice_min(lifeExp) # new function! super cool 
 ```
 
 ## vector attribute aggregation
@@ -134,16 +157,37 @@ Aggregation is the process of summarizing data with one or more 'grouping' varia
 
 Let's try to find the total population within each continent.
 ```{r include=TRUE}
+world |> 
+  group_by(continent) |> 
+  summarise(population = sum(pop, na.rm = TRUE)) |> 
+  ungroup()
 
 ```
 
 Let's also find the total area and number of countries in each continent
 ```{r include=TRUE}
 
+world |> 
+  group_by(continent) |> 
+  summarise(population = sum(pop, na.rm = TRUE),
+            total_area = sum(area_km2), 
+            num_countries = n()) #|> # we don't need to put anything in n() because the number of rows are the number of countries !!
+           # sort(pop)
+
 ```
 
 Building on this, let's find the population density of each continent, find the continent's with highest density and arrange by the number of countries. WE'll drop the geometry column to speed things up.
 ```{r include=TRUE}
+
+world |> 
+  st_drop_geometry() |> 
+  group_by(continent) |> 
+  summarise(population = sum(pop, na.rm = TRUE),
+            area_km2 = sum(area_km2, na.rm = TRUE),
+            n_countries = n()) |> # sum number of countries in each continent
+  mutate(density = round(population/area_km2)) |>  # getting a whole number
+  slice_max(density, n = 3) |>  # see top 3
+  arrange(desc(n_countries))  # new function!! 
 
 ```
 
@@ -153,6 +197,7 @@ A critical part of many data science workflows is combining data sets based on c
 
 Let's start by looking a data set on national coffee production
 ```{r include=TRUE}
+
 
 ```
 
