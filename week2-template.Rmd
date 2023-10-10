@@ -138,6 +138,8 @@ world |>
 Because we can use **dplyr** functions with **sf** objects, we can chain together commands using the pipe operator.
 
 Let's try to find the country in Asia with the highest life expectancy
+
+## new function: slice_max()
 ```{r include=TRUE}
 
 world |> 
@@ -146,6 +148,7 @@ world |>
   slice_max(lifeExp) # new function! super cool 
 
 ```
+## new function: slice_min()
 ```{r}
 world |> 
   select(name_long, continent, lifeExp) |> 
@@ -177,6 +180,7 @@ world |>
 ```
 
 Building on this, let's find the population density of each continent, find the continent's with highest density and arrange by the number of countries. WE'll drop the geometry column to speed things up.
+## new function: arrange(desc())
 ```{r include=TRUE}
 
 world |> 
@@ -197,52 +201,119 @@ A critical part of many data science workflows is combining data sets based on c
 
 Let's start by looking a data set on national coffee production
 ```{r include=TRUE}
+# pre-loaded dataset in spData
 
+head(coffee_data) # conveniently, countries are also called name_long
+class(coffee_data) # not an sf object
+# coffee_data in console
 
+```
+## renaming within join function
+```{r}
+# example w renaming to join
+
+test <- world |> 
+  select(name = name_long)
+
+# important!!! 
+test_coffee <- left_join(test, coffee_data,
+                         by = c("name" = "name_long")) # :) 
+
+cleaned_coffee <- test_coffee |> 
+  drop_na() |> 
+  arrange(desc(coffee_production_2017))
 ```
 
 We can combine this with the world data set, but joining based on country's names
 ```{r include=TRUE}
+# whatever you put as the first dataset, that's what it's going to join on to 
+world_coffee <- left_join(world, coffee_data, by = "name_long")
 
 ```
 
 And plot what this looks like...
 ```{r include=TRUE}
+tm_shape(world_coffee) +
+  tm_polygons(col = "coffee_production_2016")
+
 
 ```
 
-If we just wanted to keep countries that do have coffee data, we could use an inner join
+If we just wanted to keep countries that do have coffee data, we could use an inner join (or use drop_na)
 ```{r include=TRUE}
+world_coffee_inner <- inner_join(world, coffee_data, by = "name_long")
 
+nrow(world_coffee_inner)
+
+nrow(coffee_data)
 ```
 
 It looks like we lost some countries with coffee data, so let's figure out what's going on. We can find rows that didn't match using the **setdiff** function.
+## super important point about building checks into workflow !!
 ```{r include=TRUE}
+
+if(nrow(world_coffee_inner) != nrow(coffee_data)) {
+  print("error in joining data!")
+}
+
+setdiff(coffee_data$name_long, world$name_long)
 
 ```
 
 We see that one of the issues is that the two data sets use different naming conventions for the Democratic Republic of the Congo. We can use a string matching function to figure out what the DRC is called in the world data set.
-```{r include=TRUE}
 
+## New function: str_subset
+```{r include=TRUE}
+stringr::str_subset(world$name_long, "Dem*.+Congo")
 ```
 
 Now we can update the coffee data set with the matching name for the DRC.
+## new function: grepl pattern matching and replacement
 ```{r include=TRUE}
+# brackets notation: before comma = row, after = column
+# find the row that matches this condition
+drc = stringr::str_subset(world$name_long, "Dem*.+Congo")
 
+
+coffee_data$name_long[ grepl("Congo, ", coffee_data$name_long) ] = drc # and keep all columns
+
+coffee_data
 ```
 
 And we can try the inner join again and hopefully the DRC now matches.
 ```{r include=TRUE}
 
+world_coffee_inner <- inner_join(world, coffee_data, 
+                                 by = "name_long")
+
+nrow(world_coffee_inner)
+
+if(nrow(world_coffee_inner) != nrow(coffee_data)) {
+  print("error in joining data!")
+}
+
+setdiff(coffee_data$name_long, world$name_long)
+
+# "Others" row isn't really relevant :) 
 ```
+```{r}
+class(world_coffee_inner)
+```
+
 
 Let's visualize what a the inner join did to our spatial object
 ```{r include=TRUE}
-
+tm_shape(world_coffee_inner) +
+  tm_polygons(col = "coffee_production_2017")
 ```
 
 And let's test what would happen if we flipped the order of the data sets in the join
 ```{r include=TRUE}
+# no longer sf 
 
+flipped_coffee_inner <- inner_join(coffee_data, world, 
+                                 by = "name_long")
+
+class(flipped_coffee_inner)
 ```
 
