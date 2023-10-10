@@ -22,10 +22,45 @@ Let's start by looking at how we can construct a **sf** object
 -   then we supply some non-geographic attributes
 
 ```{r include=TRUE}
+# create a geometry for London
+# everything in sf is actually st
 
+lnd_point <- st_point(c(0.1, 51.5))
+
+# simple feature geometry list column 
+
+lnd_geom <- st_sfc(lnd_point, crs = 4326) # geometry
+# could also write crs = "EPSG:4326"
+
+# create data.frame
+
+lnd_attrib <- data.frame(
+  name = "London",
+  temperature = 25
+)
+
+# create an sf object with our point, list, and dataframe
+lnd_sf <- st_sf(lnd_attrib, geometry = lnd_geom)
+lnd_sf
+
+# class sf and a data.frame
+# each row is a different feature, R is handling each part differently
+class(lnd_sf)
 ```
+
 We can also check out what the CRS looks like.
 ```{r include=TRUE}
+
+st_crs(lnd_sf)
+# wkt = well known text
+
+# doesn't have a projection associated with it
+st_crs(lnd_sf)$IsGeographic
+
+
+# checking the proj4string (alternate version of EPSG:4326, for example)
+st_crs(lnd_sf)$proj4string
+
 
 ```
 
@@ -33,18 +68,33 @@ We can also check out what the CRS looks like.
 Now let's look at an existing **sf** object representing countries of the world
 
 ```{r include=TRUE}
+# built-in into spData
+# check class
+class(world)
+# check dimensions
+dim(world)
+
+# enter world in console to see more info 
+
 
 ```
 
 We can see that this object contains both spatial data ("geom" column) and attributes about those geometries. We can perform operations on the attribute data, just like we would with a normal data frame.
 
 ```{r include=TRUE}
+summary(world$lifeExp)
+
 ```
 
 The geometry column is "sticky", meaning it will stick around unless we explicitly get rid of it. To convert this object into a data frame, we need to drop the geometry column.
 
 ```{r include=TRUE}
+world |> 
+  select(-geom)
+# doesn't work! (still multipolygon column)
 
+# you need to use a special function to get rid of them
+world_df <- st_drop_geometry(world)
 ```
 
 ## vector attribute subsetting
@@ -52,6 +102,7 @@ The especially great things about **sf** objects is that we can use **tidyverse*
 
 We can select columns...
 ```{r include=TRUE}
+
 
 ```
 
